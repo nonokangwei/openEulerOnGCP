@@ -300,7 +300,7 @@ mkdir -p /boot/grub2 /boot/efi/EFI/openEuler /boot/efi/EFI/BOOT
 dnf install -y --disablerepo=update,debuginfo,source,update-source \
   gcc make patch elfutils-libelf-devel dkms dnf-plugins-core sudo \
   shim-x64 grub2-efi-x64 grub2-efi-x64-modules grub2-tools grub2-common efibootmgr \
-  dracut NetworkManager iproute dhcp-client chrony openssh-server \
+  dracut NetworkManager iproute dhcp-client chrony openssh-server hostname \
   ethtool iperf3 cloud-utils-growpart e2fsprogs parted gdisk python3 tar curl
 
 # 恢复默认官方 openEuler 软件源配置

@@ -161,8 +161,11 @@ run_ssh() {
     else
       rc=$?
     fi
+    if (( rc != 255 )); then
+      return "$rc"
+    fi
     if (( attempt < max_attempts )); then
-      log_warn "SSH 命令连接瞬时波动 (exit=${rc})，${attempt}/${max_attempts} 次重试等待 $(( attempt * 3 ))s..."
+      log_warn "IAP/SSH 隧道瞬时抖动 (exit=255)，第 ${attempt}/${max_attempts} 次重试等待 $(( attempt * 3 ))s..."
       sleep $(( attempt * 3 ))
     fi
     (( attempt++ ))
@@ -336,7 +339,7 @@ if [[ "$SKIP_ILB" == "true" ]]; then
 else
   log_info "[V8] 创建临时区域内部直通式负载均衡器 (ILB) 并验证 proto 66 本地路由..."
   for vm in "$VM_A" "$VM_B"; do
-    run_ssh "$vm" "sudo systemctl stop oe-ilb-hc.service >/dev/null 2>&1 || true; sudo systemctl reset-failed oe-ilb-hc.service >/dev/null 2>&1 || true; mkdir -p /tmp/hc && hostname > /tmp/hc/index.html && sudo systemd-run --unit=oe-ilb-hc /usr/bin/python3 -m http.server 8080 --directory /tmp/hc >/dev/null 2>&1"
+    run_ssh "$vm" "sudo systemctl stop oe-ilb-hc.service >/dev/null 2>&1 || true; sudo systemctl reset-failed oe-ilb-hc.service >/dev/null 2>&1 || true; mkdir -p /tmp/hc && uname -n > /tmp/hc/index.html && sudo systemd-run --unit=oe-ilb-hc /usr/bin/python3 -m http.server 8080 --directory /tmp/hc >/dev/null 2>&1"
   done
 
   gcloud compute instance-groups unmanaged create "$IG_NAME" \
