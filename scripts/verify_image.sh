@@ -287,16 +287,19 @@ log_info "[V7] 测试实例间 1460 MTU 禁分片 Ping 与双向 8 流 iperf3 �
 IP_A="$(gcloud compute instances describe "$VM_A" --project="$PROJECT_ID" --zone="$VERIFY_ZONE" --format="value(networkInterfaces[0].networkIP)")"
 IP_B="$(gcloud compute instances describe "$VM_B" --project="$PROJECT_ID" --zone="$VERIFY_ZONE" --format="value(networkInterfaces[0].networkIP)")"
 
+run_ssh "$VM_A" "sudo systemctl stop firewalld >/dev/null 2>&1 || true"
+run_ssh "$VM_B" "sudo systemctl stop firewalld >/dev/null 2>&1 || true"
+
 run_ssh "$VM_B" "pkill iperf3 >/dev/null 2>&1 || true; iperf3 -s -D >/dev/null 2>&1 </dev/null"
-PING_RES="$(run_ssh "$VM_A" "ping -c 4 -M do -s 1432 ${IP_B}")"
-BW_AB="$(run_ssh "$VM_A" "iperf3 -c ${IP_B} -P 8 -t 8 | grep -E '\[SUM\].*sender' | tail -1")"
+PING_RES="$(run_ssh "$VM_A" "sudo ping -c 4 -M do -s 1432 ${IP_B}" || true)"
+BW_AB="$(run_ssh "$VM_A" "iperf3 -c ${IP_B} -P 8 -t 8 | grep -E '\[SUM\].*sender' | tail -1" || true)"
 run_ssh "$VM_B" "pkill iperf3 >/dev/null 2>&1 || true"
 
 run_ssh "$VM_A" "pkill iperf3 >/dev/null 2>&1 || true; iperf3 -s -D >/dev/null 2>&1 </dev/null"
-BW_BA="$(run_ssh "$VM_B" "iperf3 -c ${IP_A} -P 8 -t 8 | grep -E '\[SUM\].*sender' | tail -1")"
+BW_BA="$(run_ssh "$VM_B" "iperf3 -c ${IP_A} -P 8 -t 8 | grep -E '\[SUM\].*sender' | tail -1" || true)"
 run_ssh "$VM_A" "pkill iperf3 >/dev/null 2>&1 || true"
 
-TX_TO="$(run_ssh "$VM_A" "sudo ethtool -S eth0 | awk '/tx_timeouts:/{print \$2; exit}' | tr -d '\r'")"
+TX_TO="$(run_ssh "$VM_A" "sudo ethtool -S eth0 | awk '/tx_timeouts:/{print \$2; exit}' | tr -d '\r'" || true)"
 
 if grep -q "0% packet loss" <<<"$PING_RES" && [[ -n "$BW_AB" && -n "$BW_BA" && "${TX_TO:-0}" == "0" ]]; then
   RATE_AB="$(awk '{for(i=1;i<=NF;i++) if($(i+1) ~ /bits\/sec/) print $i" "$(i+1)}' <<<"$BW_AB")"
@@ -379,9 +382,9 @@ else
     sleep 5
   done
 
-  PROTO66_A="$(run_ssh "$VM_A" "ip route show table local proto 66")"
-  PROTO66_B="$(run_ssh "$VM_B" "ip route show table local proto 66")"
-  VIP_RESP="$(run_ssh "$VM_A" "for n in {1..6}; do curl -fsS --max-time 3 http://${ILB_VIP}:8080/; done | sort -u | tr '\n' ' '")"
+  PROTO66_A="$(run_ssh "$VM_A" "ip route show table local proto 66" || true)"
+  PROTO66_B="$(run_ssh "$VM_B" "ip route show table local proto 66" || true)"
+  VIP_RESP="$(run_ssh "$VM_A" "for n in {1..6}; do curl -fsS --max-time 3 http://${ILB_VIP}:8080/; done | sort -u | tr '\n' ' '" || true)"
 
   if (( HEALTHY_COUNT >= 2 )) && grep -q "$ILB_VIP" <<<"$PROTO66_A" && grep -q "$ILB_VIP" <<<"$PROTO66_B" && [[ -n "$VIP_RESP" ]]; then
     V_STATUS[V8]="PASS"

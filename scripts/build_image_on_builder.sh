@@ -343,11 +343,15 @@ if ! grep -Eq '^[#@]includedir[[:space:]]+/etc/sudoers\.d' /etc/sudoers; then
   echo '#includedir /etc/sudoers.d' >> /etc/sudoers
 fi
 
-# 屏蔽源镜像自带的 cloud-init 及不适配虚拟化多队列中断亲和的 irqbalance
+# 屏蔽源镜像自带的 cloud-init 及不适配虚拟化多队列中断亲和的 irqbalance；默认停用系统内防火墙（交由 GCP VPC 防火墙管控）
 for svc in cloud-init-local cloud-init cloud-config cloud-final irqbalance; do
   systemctl disable "${svc}.service" 2>/dev/null || true
   systemctl mask "${svc}.service" 2>/dev/null || true
 done
+systemctl disable firewalld.service 2>/dev/null || true
+
+# 恢复跨文件系统同步后 iputils (ping) 的文件能力位，允许普通用户直接执行 ping
+rpm --setcaps iputils 2>/dev/null || chmod u+s /usr/bin/ping 2>/dev/null || true
 
 # 启用核心系统与 GCE 服务
 systemctl enable NetworkManager.service sshd.service chronyd.service
@@ -438,6 +442,7 @@ net.ipv4.conf.all.rp_filter = 1
 net.ipv4.conf.default.rp_filter = 1
 net.ipv4.icmp_echo_ignore_broadcasts = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
+net.ipv4.ping_group_range = 0 2147483647
 kernel.randomize_va_space = 2
 fs.protected_hardlinks = 1
 fs.protected_symlinks = 1

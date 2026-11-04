@@ -145,7 +145,7 @@ df -h / /boot/efi
 iperf3 -s -D
 
 # 在主测实例验证 1460 MTU 禁止分片大包 (1432B + 28B IP/ICMP 头 = 1460B)
-ping -c 4 -M do -s 1432 <PEER_INTERNAL_IP>
+sudo ping -c 4 -M do -s 1432 <PEER_INTERNAL_IP>
 
 # 执行 8 并发流 TCP 吞吐测试
 iperf3 -c <PEER_INTERNAL_IP> -P 8 -t 10

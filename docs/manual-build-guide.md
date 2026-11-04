@@ -219,11 +219,13 @@ dnf download -y --nogpgcheck --destdir=/tmp/gce-rpms google-guest-agent.x86_64 g
 rpm -Uvh --nodeps /tmp/gce-rpms/*.rpm
 rm -rf /tmp/gce-rpms
 
-# 屏蔽冲突的 cloud-init 与干扰虚拟多队列中断绑定的 irqbalance
+# 屏蔽冲突的 cloud-init 与干扰虚拟多队列中断绑定的 irqbalance；默认停用系统内防火墙
 for svc in cloud-init-local cloud-init cloud-config cloud-final irqbalance; do
   systemctl disable "${svc}.service" 2>/dev/null || true
   systemctl mask "${svc}.service" 2>/dev/null || true
 done
+systemctl disable firewalld.service 2>/dev/null || true
+rpm --setcaps iputils 2>/dev/null || chmod u+s /usr/bin/ping 2>/dev/null || true
 
 systemctl enable NetworkManager.service sshd.service chronyd.service
 systemctl enable \
