@@ -317,7 +317,7 @@ cat <<EOF > /etc/depmod.d/gve.conf
 override gve * extra
 override gve * updates
 EOF
-echo "gve" > /etc/modules-load.d/gve.conf
+printf "gve\n8021q\n" > /etc/modules-load.d/gve.conf
 depmod -a "${KVER}"
 modinfo -k "${KVER}" gve
 
@@ -436,26 +436,32 @@ net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.default.accept_redirects = 0
 net.ipv4.conf.all.secure_redirects = 1
 net.ipv4.conf.default.secure_redirects = 1
+net.ipv4.ip_forward = 0
 net.ipv4.conf.all.send_redirects = 0
 net.ipv4.conf.default.send_redirects = 0
 net.ipv4.conf.all.rp_filter = 1
 net.ipv4.conf.default.rp_filter = 1
 net.ipv4.icmp_echo_ignore_broadcasts = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
+net.ipv4.conf.all.log_martians = 1
+net.ipv4.conf.default.log_martians = 1
 net.ipv4.ping_group_range = 0 2147483647
+vm.mmap_min_addr = 65536
 kernel.randomize_va_space = 2
 fs.protected_hardlinks = 1
 fs.protected_symlinks = 1
 kernel.kptr_restrict = 1
+-kernel.yama.ptrace_scope = 1
+kernel.perf_event_paranoid = 2
 EOF
 
 if [[ -f /etc/selinux/config ]]; then
   sed -i 's/^SELINUX=.*/SELINUX=permissive/' /etc/selinux/config
 fi
 
-# 构建包含跨代际网卡与存储驱动 (gve + nvme + virtio) 的通用 initramfs
+# 构建包含跨代际网卡、VLAN 动态网卡与存储驱动 (gve + 8021q + nvme + virtio) 的通用 initramfs
 dracut -f --no-hostonly --kver "${KVER}" \
-  --add-drivers "gve nvme nvme_core virtio_pci virtio_scsi virtio_blk virtio_net"
+  --add-drivers "gve 8021q nvme nvme_core virtio_pci virtio_scsi virtio_blk virtio_net"
 lsinitrd "/boot/initramfs-${KVER}.img" | grep -E "gve\.ko|nvme\.ko"
 
 # 配置 GRUB2（输出到串口 ttyS0，移除 quiet/rhgb/splashimage=，固定经典 eth0 命名）

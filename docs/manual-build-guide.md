@@ -195,7 +195,7 @@ dkms install -m gve -v "${GVE_NUM_VER}" -k "${KVER}" --force
 
 mkdir -p /etc/depmod.d /etc/modules-load.d
 printf "override gve * extra\noverride gve * updates\n" > /etc/depmod.d/gve.conf
-echo "gve" > /etc/modules-load.d/gve.conf
+printf "gve\n8021q\n" > /etc/modules-load.d/gve.conf
 depmod -a "${KVER}"
 modinfo -k "${KVER}" gve
 ```
@@ -279,15 +279,44 @@ sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_con
 sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 echo "ClientAliveInterval 420" >> /etc/ssh/sshd_config
 
+# 对齐 Google Cloud 官方推荐的内核运行期安全基线
+mkdir -p /etc/sysctl.d
+cat <<'EOF' > /etc/sysctl.d/99-gce-security.conf
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.all.accept_source_route = 0
+net.ipv4.conf.default.accept_source_route = 0
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+net.ipv4.conf.all.secure_redirects = 1
+net.ipv4.conf.default.secure_redirects = 1
+net.ipv4.ip_forward = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.default.send_redirects = 0
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.default.rp_filter = 1
+net.ipv4.icmp_echo_ignore_broadcasts = 1
+net.ipv4.icmp_ignore_bogus_error_responses = 1
+net.ipv4.conf.all.log_martians = 1
+net.ipv4.conf.default.log_martians = 1
+net.ipv4.ping_group_range = 0 2147483647
+vm.mmap_min_addr = 65536
+kernel.randomize_va_space = 2
+fs.protected_hardlinks = 1
+fs.protected_symlinks = 1
+kernel.kptr_restrict = 1
+-kernel.yama.ptrace_scope = 1
+kernel.perf_event_paranoid = 2
+EOF
+
 [[ -f /etc/selinux/config ]] && sed -i 's/^SELINUX=.*/SELINUX=permissive/' /etc/selinux/config
 ```
 
 ### 4. 在 `chroot` 内生成通用 `initramfs` 与 UEFI GRUB 配置
 
 ```bash
-# 先生成包含 gve + nvme + virtio 驱动的通用 initramfs，再运行 grub2-mkconfig
+# 先生成包含 gve + 8021q + nvme + virtio 驱动的通用 initramfs，再运行 grub2-mkconfig
 dracut -f --no-hostonly --kver "${KVER}" \
-  --add-drivers "gve nvme nvme_core virtio_pci virtio_scsi virtio_blk virtio_net"
+  --add-drivers "gve 8021q nvme nvme_core virtio_pci virtio_scsi virtio_blk virtio_net"
 lsinitrd "/boot/initramfs-${KVER}.img" | grep -E "gve\.ko|nvme\.ko"
 
 cat <<'EOF' > /etc/default/grub

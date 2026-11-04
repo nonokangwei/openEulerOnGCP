@@ -34,6 +34,7 @@ flowchart LR
 * **跨代际一镜通用**：通用 `initramfs` 同时内置 `gve`、`nvme` 与 `virtio` 驱动，一套镜像可同时启动第四代 `N4`/`N4D`、第三代 `C3` 及第二代 `N2` 实例。
 * **完整 Google Cloud 平台集成**：预装 `google-guest-agent`，原生支持项目/实例元数据 SSH 密钥免密登录、启动/关机脚本、Hyperdisk 首启根分区在线自动扩容、Google 内部 NTP 闰秒平滑同步以及区域内部直通式负载均衡（ILB `proto 66` 路由）。
 * **全参数化与零环境耦合**：所有项目 ID、存储桶、可用区、VPC 网络、内核版本均通过 `.env` 或命令行参数传入，脚本对未替换占位符会自动提示用户输入。
+* **符合 Google Cloud 官方制镜与导入规范**：全面对齐官方 [构建自定义镜像要求 (`building-custom-os`)](https://docs.cloud.google.com/compute/docs/images/building-custom-os)、[手动导入现有镜像 (`import-existing-image`)](https://docs.cloud.google.com/compute/docs/import/import-existing-image) 与 [配置导入镜像 (`configuring-imported-images`)](https://docs.cloud.google.com/compute/docs/import/configuring-imported-images) 的虚拟硬件驱动、必需内核选项、内核安全基线及稀疏归档要求（详见 [官方规范逐项对照表](docs/gcp-compliance-and-faq.md)）。
 
 ---
 
@@ -217,7 +218,7 @@ bash scripts/verify_image.sh \
 
 * **[分步手动构建指南 (`docs/manual-build-guide.md`)](docs/manual-build-guide.md)**：逐步拆解从下载 `qcow2`、GPT/UEFI 分区、DKMS 编译 `gve`、安装 Guest Agent 到打包导入的完整命令与设计原理。
 * **[测试与验收指南 (`docs/verification-guide.md`)](docs/verification-guide.md)**：提供 V1–V8 每项验收指标的手工检查命令、预期输出示例及性能压测方法。
-* **[Google Cloud 规范对照与常见问答 (`docs/gcp-compliance-and-faq.md`)](docs/gcp-compliance-and-faq.md)**：逐条对照 Google Cloud 官方《手动导入启动盘》前置要求，并解答自定义内核后缀适配、`openEuler 24.03 LTS` 适配与常见排障问题。
+* **[Google Cloud 官方规范逐项对照与常见问答 (`docs/gcp-compliance-and-faq.md`)](docs/gcp-compliance-and-faq.md)**：逐条核查对照 Google Cloud 官方《构建自定义镜像要求 (`building-custom-os`)》《手动导入启动盘 (`import-existing-image`)》与《配置导入镜像 (`configuring-imported-images`)》，并解答自定义内核后缀适配、`openEuler 24.03 LTS` 适配与常见排障问题。
 
 ## 九、开源许可
 
