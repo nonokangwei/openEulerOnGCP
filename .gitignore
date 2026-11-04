@@ -1,0 +1,17 @@
+# Local environment overrides (never commit real project IDs or bucket names)
+.env
+*.env.local
+
+# Disk image & archive build artifacts
+*.raw
+*.qcow2
+*.qcow2.xz
+*.tar.gz
+*.img
+*.sha256
+
+# Temporary working directories & logs
+build-work/
+logs/
+*.log
+.DS_Store
