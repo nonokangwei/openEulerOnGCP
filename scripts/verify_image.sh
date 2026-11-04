@@ -145,13 +145,29 @@ trap cleanup EXIT
 run_ssh() {
   local vm="$1"
   local cmd="$2"
-  gcloud compute ssh "$vm" \
-    --project="$PROJECT_ID" \
-    --zone="$VERIFY_ZONE" \
-    "${SSH_TUNNEL_FLAGS[@]}" \
-    --quiet \
-    --ssh-flag="-o ConnectTimeout=15 -o StrictHostKeyChecking=no" \
-    --command="$cmd"
+  local attempt=1
+  local max_attempts=4
+  local rc=0
+
+  while (( attempt <= max_attempts )); do
+    if gcloud compute ssh "$vm" \
+      --project="$PROJECT_ID" \
+      --zone="$VERIFY_ZONE" \
+      "${SSH_TUNNEL_FLAGS[@]}" \
+      --quiet \
+      --ssh-flag="-o ConnectTimeout=15 -o StrictHostKeyChecking=no -o ServerAliveInterval=30" \
+      --command="$cmd"; then
+      return 0
+    else
+      rc=$?
+    fi
+    if (( attempt < max_attempts )); then
+      log_warn "SSH 命令连接瞬时波动 (exit=${rc})，${attempt}/${max_attempts} 次重试等待 $(( attempt * 3 ))s..."
+      sleep $(( attempt * 3 ))
+    fi
+    (( attempt++ ))
+  done
+  return "$rc"
 }
 
 declare -A V_STATUS
@@ -320,7 +336,7 @@ if [[ "$SKIP_ILB" == "true" ]]; then
 else
   log_info "[V8] 创建临时区域内部直通式负载均衡器 (ILB) 并验证 proto 66 本地路由..."
   for vm in "$VM_A" "$VM_B"; do
-    run_ssh "$vm" "pkill -f 'http.server 8080' >/dev/null 2>&1 || true; mkdir -p /tmp/hc && hostname > /tmp/hc/index.html && nohup python3 -m http.server 8080 --directory /tmp/hc >/tmp/hc.log 2>&1 </dev/null &"
+    run_ssh "$vm" "sudo systemctl stop oe-ilb-hc.service >/dev/null 2>&1 || true; sudo systemctl reset-failed oe-ilb-hc.service >/dev/null 2>&1 || true; mkdir -p /tmp/hc && hostname > /tmp/hc/index.html && sudo systemd-run --unit=oe-ilb-hc /usr/bin/python3 -m http.server 8080 --directory /tmp/hc >/dev/null 2>&1"
   done
 
   gcloud compute instance-groups unmanaged create "$IG_NAME" \
