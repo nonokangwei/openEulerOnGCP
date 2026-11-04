@@ -68,6 +68,42 @@ derive_region_from_zone() {
   echo "${zone%-*}"
 }
 
+resolve_subnet_for_region() {
+  local project_id="$1"
+  local network="$2"
+  local region="$3"
+  local explicit_subnet="${4:-}"
+
+  if [[ -n "$explicit_subnet" ]] && ! is_placeholder_or_empty "$explicit_subnet"; then
+    echo "$explicit_subnet"
+    return 0
+  fi
+
+  local candidates=""
+  candidates="$(gcloud compute networks subnets list \
+    --project="$project_id" \
+    --network="$network" \
+    --regions="$region" \
+    --filter="purpose=PRIVATE" \
+    --format="value(name)" \
+    --limit=20 2>/dev/null || true)"
+
+  if [[ -z "$candidates" ]]; then
+    echo ""
+    return 0
+  fi
+
+  local line=""
+  while IFS= read -r line; do
+    if [[ "$line" == "$network" ]]; then
+      echo "$line"
+      return 0
+    fi
+  done <<<"$candidates"
+
+  head -n1 <<<"$candidates"
+}
+
 wait_for_vm_ssh() {
   local vm_name="$1"
   local project_id="$2"

@@ -96,6 +96,10 @@ require_param IMAGE_NAME "待验证的自定义镜像名称" "--image-name" "ope
 require_param VERIFY_ZONE "测试实例所在的可用区" "--zone" "us-east4-b"
 
 VERIFY_REGION="$(derive_region_from_zone "$VERIFY_ZONE")"
+SUBNET="$(resolve_subnet_for_region "$PROJECT_ID" "$NETWORK" "$VERIFY_REGION" "${VERIFY_SUBNET:-$SUBNET}")"
+if [[ -n "$SUBNET" ]]; then
+  log_info "使用网络 ${NETWORK} 在区域 ${VERIFY_REGION} 下的子网: ${SUBNET}"
+fi
 EXPECTED_GVE_NUM="${EXPECTED_GVE_VER#v}"
 RUN_ID="$(date +%m%d%H%M)-$(( RANDOM % 900 + 100 ))"
 PREFIX="oe-vfy-${RUN_ID}"

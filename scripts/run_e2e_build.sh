@@ -119,6 +119,10 @@ require_param GCS_BUCKET "暂存镜像归档的 GCS 存储桶名称（不含 gs:
 require_param BUILD_ZONE "临时构建机所在的可用区" "--zone" "us-central1-a"
 
 BUILD_REGION="$(derive_region_from_zone "$BUILD_ZONE")"
+SUBNET="$(resolve_subnet_for_region "$PROJECT_ID" "$NETWORK" "$BUILD_REGION" "${BUILD_SUBNET:-$SUBNET}")"
+if [[ -n "$SUBNET" ]]; then
+  log_info "使用网络 ${NETWORK} 在区域 ${BUILD_REGION} 下的子网: ${SUBNET}"
+fi
 RUN_ID="$(date +%m%d%H%M)-$(( RANDOM % 900 + 100 ))"
 BUILDER_VM="oe-img-builder-${RUN_ID}"
 OUTPUT_ARCHIVE="${IMAGE_NAME}.tar.gz"
