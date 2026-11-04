@@ -394,7 +394,7 @@ else
   HEALTHY_COUNT=0
   for (( i=1; i<=18; i++ )); do
     HEALTH_OUT="$(gcloud compute backend-services get-health "$BS_NAME" --project="$PROJECT_ID" --region="$VERIFY_REGION" --format="value(status.healthStatus.healthState)" 2>/dev/null || true)"
-    HEALTHY_COUNT="$(grep -o "HEALTHY" <<<"$HEALTH_OUT" | wc -l | tr -d ' ')"
+    HEALTHY_COUNT="$(( $( (grep -o "HEALTHY" <<<"$HEALTH_OUT" || true) | wc -l ) ))"
     if (( HEALTHY_COUNT >= 2 )); then
       break
     fi
