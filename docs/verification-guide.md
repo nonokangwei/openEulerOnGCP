@@ -172,3 +172,9 @@ ip route show table local proto 66
 local <ILB_VIP> dev eth0 scope host
 ```
 同时负载均衡器后端健康检查状态显示为 `HEALTHY`，客户端请求 `http://<ILB_VIP>:8080/` 可正常负载分发至后端各台 openEuler 实例。
+
+---
+
+## 三、延伸阅读：生产级准入压测报告（PoV Gate 1 – 4）
+
+除上述 V1–V8 基础功能验收外，针对宿主机例行维护热迁移（Live Migration）、48 小时高并发全双工网络烤机（累计约 `496.76 TB` 吞吐零内存泄漏）、20 轮驱动队列热调与状态机重置、20 节点并发冷启动及缩容连接排空（Connection Draining）的完整压测报告，请参阅 **[生产级准入验收测试报告 (`docs/production-pov-report.md`)](production-pov-report.md)**。

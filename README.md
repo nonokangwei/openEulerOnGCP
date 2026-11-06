@@ -54,6 +54,7 @@ flowchart LR
 └── docs/
     ├── manual-build-guide.md              # 分步手动构建详解（适合逐步执行或集成至自有 CI/Packer）
     ├── verification-guide.md              # V1–V8 详细测试指南与手动验证命令手册
+    ├── production-pov-report.md           # 生产级准入验收报告（热迁移、48h 约 500TB 烤机、热调与连接排空实测）
     └── gcp-compliance-and-faq.md          # Google Cloud 官方导入规范逐项对照表、版本扩展与常见问答
 ```
 
@@ -191,6 +192,17 @@ bash scripts/verify_image.sh \
 
 > 若您选择的测试可用区暂未开通 `N4D` 机型，可附加 `--skip-n4d` 参数（脚本会自动使用两台 `N4` 实例完成双机吞吐与负载均衡验证）。详细手工验证步骤请参阅 **[测试与验收指南](docs/verification-guide.md)**。
 
+### 生产级准入压测基准（PoV Gate 1 – 4）
+
+除上述 V1–V8 基础验收外，本仓库构建的自定义镜像已在第四代 `N4`（Intel Emerald Rapids）与 `N4D`（AMD EPYC Turin）实例上通过全套生产级故障演练与长稳烤机验收（完整指标与复现步骤详见 **[生产级准入验收测试报告 (`docs/production-pov-report.md`)](docs/production-pov-report.md)**）：
+
+| 生产准入测试项 | 压测规模与实测表现 | 结论 |
+| :--- | :--- | :---: |
+| **1. 宿主机热迁移无感测试** | 4 流线速 `iperf3`（平均 `9.40 Gbps`）+ 4 条持久 TCP 长连接并发下触发宿主机维护迁移：实例零重启、累计 `8,670` 次请求 **`0` 断开 / `0` 报错**（最大单次抖动 `208.84 ms`），`tx_timeouts = 0` | ✅ **PASS** |
+| **2. 48 小时高负载网络烤机** | `N4` + `N4D` 全双工大包 TCP + `64B` 小包 UDP 持续跑满 **48.0 小时**：单机 `~12.65 Gbps` / `~84.6 万 PPS`、**双机累计吞吐 `496.76 TB`**，`tx_timeouts = 0`、零软死锁、`SUnreclaim` / `skbuff` / `kmalloc` 零内存泄漏 | ✅ **PASS** |
+| **3. 驱动状态机重置与参数热调** | 在线循环 **20 轮**（共 100 次队列重建）`ethtool -G` 扩缩环（均值 `4.82 ms`）、切换 `MTU 8896 <-> 1460`（均值 `< 2 ms`）及 `eth0 down/up`（均值 `37.52 ms`），模块引用计数与 Slab 零泄漏 | ✅ **PASS** |
+| **4. 弹性扩缩容与连接排空** | 并发冷启动 **20 台** `N4` 实例 `100%` 成功（系统内启动 `12.96s`、`20 GiB` 自动扩盘、ILB `20/20 HEALTHY`）；`20 -> 10` 缩容期间 `50 QPS` 新建连接 `100%` 成功实时摘流，缩容节点存量长连接继续保持 **`80s+`** 且 `18s` 慢请求 `100%` 完整返回，`20/20` 节点完整上报 ACPI 优雅停机凭证 | ✅ **PASS** |
+
 ---
 
 ## 七、核心参数速查表
@@ -218,6 +230,7 @@ bash scripts/verify_image.sh \
 
 * **[分步手动构建指南 (`docs/manual-build-guide.md`)](docs/manual-build-guide.md)**：逐步拆解从下载 `qcow2`、GPT/UEFI 分区、DKMS 编译 `gve`、安装 Guest Agent 到打包导入的完整命令与设计原理。
 * **[测试与验收指南 (`docs/verification-guide.md`)](docs/verification-guide.md)**：提供 V1–V8 每项验收指标的手工检查命令、预期输出示例及性能压测方法。
+* **[生产级准入验收测试报告 (`docs/production-pov-report.md`)](docs/production-pov-report.md)**：涵盖宿主机热迁移、48 小时近 `500 TB` 全双工网络烤机、100 次驱动队列重建热调、20 节点并发扩缩容与双轨连接排空的实测基准报告。
 * **[Google Cloud 官方规范逐项对照与常见问答 (`docs/gcp-compliance-and-faq.md`)](docs/gcp-compliance-and-faq.md)**：逐条核查对照 Google Cloud 官方《构建自定义镜像要求 (`building-custom-os`)》《手动导入启动盘 (`import-existing-image`)》与《配置导入镜像 (`configuring-imported-images`)》，并解答自定义内核后缀适配、`openEuler 24.03 LTS` 适配与常见排障问题。
 
 ## 九、开源许可
